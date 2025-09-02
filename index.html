@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+
+  <meta charset="UTF-8" />
+  <link rel="icon" href="data:,">
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mediaverse</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  
+  <!-- Three.js via CDN - using ES module version -->
+  <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.178.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.178.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+	<script>
+  // After you create the world:
+  let world = null;
+
+  document.getElementById('startBtn').addEventListener('click', () => {
+    document.getElementById('mainMenu').style.display = 'none';
+    world = new Sketchbook.World('build/assets/world.glb');
+
+    // When Sketchbook finishes its initial layout, hook the canvas
+    const tryHook = () => {
+      const sbCanvas = document.getElementById('canvas');
+      if (!sbCanvas) { requestAnimationFrame(tryHook); return; }
+
+      // Click to request pointer lock
+      sbCanvas.addEventListener('click', () => {
+        if (document.pointerLockElement !== sbCanvas) {
+          sbCanvas.requestPointerLock?.();
+        }
+      });
+
+      // If you want pointer-lock auto-on:
+      // setTimeout(() => sbCanvas.requestPointerLock?.(), 300);
+    };
+    tryHook();
+  });
+
+  // Optional: show a small message when pointer lock engages
+  document.addEventListener('pointerlockchange', () => {
+    const locked = document.pointerLockElement === document.getElementById('canvas');
+    console.log('Pointer lock', locked ? 'ON' : 'OFF');
+  });
+</script>
+
+ 
+
+
+  <!-- Background Effects -->
+  <div class="background-effects">
+    <div class="particle particle-1"></div>
+    <div class="particle particle-2"></div>
+    <div class="particle particle-3"></div>
+    <div class="grid-overlay"></div>
+  </div>
+
+  <!-- Top-Right Corner Logo -->
+  <div id="cornerLogo" role="img" aria-label="Game Logo">
+    <div class="logo-glow"></div>
+  </div>
+
+  <!-- Main Menu UI -->
+  <div id="mainMenu" role="dialog" aria-labelledby="menu-title">
+    <div class="menu-header">
+      <h1 id="menu-title">
+        <span class="title-icon">🌐</span>
+        <span class="title-text">Mediaverse</span>
+      </h1>
+      <p class="menu-subtitle">Immerse yourself in an interactive experience</p>
+    </div>
+
+    <nav class="menu-navigation">
+      <button id="startBtn" class="menu-btn primary-btn" data-action="start">
+        <span class="btn-icon">▶</span>
+        <span class="btn-text">Start Adventure</span>
+        <div class="btn-ripple"></div>
+      </button>
+
+      <button class="menu-btn secondary-btn" data-action="help">
+        <span class="btn-icon">❓</span>
+        <span class="btn-text">Help & Controls</span>
+        <div class="btn-ripple"></div>
+      </button>
+
+      <button class="menu-btn secondary-btn" data-action="settings">
+        <span class="btn-icon">⚙</span>
+        <span class="btn-text">Settings</span>
+        <div class="btn-ripple"></div>
+      </button>
+
+      <button class="menu-btn secondary-btn" data-action="about">
+        <span class="btn-icon">ℹ</span>
+        <span class="btn-text">About</span>
+        <div class="btn-ripple"></div>
+      </button>
+    </nav>
+
+    <div class="menu-footer">
+      <div class="version-info">v1.2.0</div>
+    </div>
+  </div>
+
+  <!-- Game UI Elements -->
+  <div id="gameUI" class="game-interface" style="display: none;">
+    <div id="pointerMsg" class="pointer-message">
+      <div class="message-icon">🖱️</div>
+      <div class="message-content">
+        <span class="message-title">Mouse Control Active</span>
+        <span class="message-subtitle">Press ESC to exit • WASD to move</span>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Error Modal -->
+  <div id="errorModal" class="modal-overlay" style="display: none;" role="dialog" aria-labelledby="error-title" aria-modal="true">
+    <div class="modal-content error-modal">
+      <div class="modal-header">
+        <h3 id="error-title"><i class="fas fa-exclamation-triangle"></i> Error</h3>
+      </div>
+      <div class="modal-body">
+        <p id="errorMessage">An unexpected error occurred.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn primary-btn" onclick="closeErrorModal()" aria-label="Close error dialog">
+          <i class="fas fa-check"></i> OK
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhanced Help Panel -->
+  <div id="helpPanel" class="modal-overlay" style="display: none;" role="dialog" aria-labelledby="help-title" aria-modal="true">
+    <div class="modal-content help-modal">
+      <div class="modal-header">
+        <h3 id="help-title"><i class="fas fa-question-circle"></i> Help & Controls</h3>
+        <button class="modal-btn close-btn" onclick="closePanel('helpPanel')" aria-label="Close help panel">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="help-sections">
+          <!-- Movement Controls -->
+          <div class="help-section">
+            <h4 class="section-title">
+              <i class="fas fa-running"></i>
+              Movement Controls
+            </h4>
+            <div class="controls-grid">
+              <div class="control-item">
+                <div class="key-visual">
+                  <kbd class="key">W</kbd>
+                </div>
+                <div class="control-description">
+                  <span class="action-name">Move Forward</span>
+                  <span class="action-detail">Walk towards your view direction</span>
+                </div>
+              </div>
+              <div class="control-item">
+                <div class="key-visual">
+                  <kbd class="key">S</kbd>
+                </div>
+                <div class="control-description">
+                  <span class="action-name">Move Backward</span>
+                  <span class="action-detail">Walk away from your view direction</span>
+                </div>
+              </div>
+              <div class="control-item">
+                <div class="key-visual">
+                  <kbd class="key">A</kbd>
+                </div>
+                <div class="control-description">
+                  <span class="action-name">Strafe Left</span>
+                  <span class="action-detail">Move sideways to the left</span>
+                </div>
+              </div>
+              <div class="control-item">
+                <div class="key-visual">
+                  <kbd class="key">D</kbd>
+                </div>
+                <div class="control-description">
+                  <span class="action-name">Strafe Right</span>
+                  <span class="action-detail">Move sideways to the right</span>
+                </div>
+              </div>
+              <div class="control-item">
+                <div class="key-visual">
+                  <kbd class="key">Shift</kbd>
+                </div>
+                <div class="control-description">
+                  <span class="action-name">Sprint</span>
+                  <span class="action-detail">Hold to move faster</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Camera Controls -->
+          <div class="help-section">
+            <h4 class="section-title">
+              <i class="fas fa-video"></i>
+              Camera Controls
+            </h4>
+            <div class="controls-grid">
+              <div class="control-item">
+                <div class="key-visual">
+                  <i class="fas fa-mouse"></i>
+                </div>
+                <div class="control-description">
+                  <span class="action-name">Look Around</span>
+                  <span class="action-detail">Move mouse to rotate camera view</span>
+                </div>
+              </div>
+              <div class="control-item">
+                <div class="key-visual">
+                  <kbd class="key">Click</kbd>
+                </div>
+                <div class="control-description">
+                  <span class="action-name">Enable Mouse Look</span>
+                  <span class="action-detail">Click canvas to capture mouse cursor</span>
+                </div>
+              </div>
+              <div class="control-item">
+                <div class="key-visual">
+                  <kbd class="key">ESC</kbd>
+                </div>
+                <div class="control-description">
+                  <span class="action-name">Exit Mouse Control</span>
+                  <span class="action-detail">Release mouse cursor control</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- System Controls -->
+          <div class="help-section">
+            <h4 class="section-title">
+              <i class="fas fa-cog"></i>
+              System Controls
+            </h4>
+            <div class="controls-grid">
+              <div class="control-item">
+                <div class="key-visual">
+                  <kbd class="key">F</kbd>
+                </div>
+                <div class="control-description">
+                  <span class="action-name">Toggle Fullscreen</span>
+                  <span class="action-detail">Enter or exit fullscreen mode</span>
+                </div>
+              </div>
+              <div class="control-item">
+                <div class="key-visual">
+                  <kbd class="key">Tab</kbd>
+                </div>
+                <div class="control-description">
+                  <span class="action-name">Toggle HUD</span>
+                  <span class="action-detail">Show or hide interface elements</span>
+                </div>
+              </div>
+              <div class="control-item">
+                <div class="key-visual">
+                  <kbd class="key">P</kbd>
+                </div>
+                <div class="control-description">
+                  <span class="action-name">Pause</span>
+                  <span class="action-detail">Pause the simulation</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="help-tips">
+          <h4 class="tips-title"><i class="fas fa-lightbulb"></i> Pro Tips</h4>
+          <ul class="tips-list">
+            <li>Hold Shift while moving to sprint for faster movement</li>
+            <li>Use smooth mouse movements for better camera control</li>
+            <li>Adjust mouse sensitivity in Settings for optimal experience</li>
+            
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhanced Settings Panel -->
+  <div id="settingsPanel" class="modal-overlay" style="display: none;" role="dialog" aria-labelledby="settings-title" aria-modal="true">
+    <div class="modal-content settings-modal">
+      <div class="modal-header">
+        <h3 id="settings-title"><i class="fas fa-cog"></i> Settings</h3>
+        <button class="modal-btn close-btn" onclick="closePanel('settingsPanel')" aria-label="Close settings panel">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-tabs">
+          <button class="tab-btn active" data-tab="graphics">
+            <i class="fas fa-display"></i>
+            Graphics
+          </button>
+          <button class="tab-btn" data-tab="audio">
+            <i class="fas fa-volume-up"></i>
+            Audio
+          </button>
+          <button class="tab-btn" data-tab="controls">
+            <i class="fas fa-gamepad"></i>
+            Controls
+          </button>
+        </div>
+
+        <div class="settings-content">
+          <!-- Graphics Settings -->
+          <div class="tab-content active" id="graphics-tab">
+            <div class="setting-group">
+              <h4 class="group-title">Display Quality</h4>
+              <div class="setting-item">
+                <label for="qualitySelect" class="setting-label">
+                  <i class="fas fa-eye"></i>
+                  Graphics Quality
+                </label>
+                <select id="qualitySelect" class="setting-select">
+                  <option value="low">Low</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="high">High</option>
+                  <option value="ultra">Ultra</option>
+                </select>
+              </div>
+              <div class="setting-item">
+                <label for="resolutionSelect" class="setting-label">
+                  <i class="fas fa-expand"></i>
+                  Resolution
+                </label>
+                <select id="resolutionSelect" class="setting-select">
+                  <option value="720p">1280x720</option>
+                  <option value="1080p" selected>1920x1080</option>
+                  <option value="1440p">2560x1440</option>
+                  <option value="4k">3840x2160</option>
+                </select>
+              </div>
+              <div class="setting-item">
+                <label class="setting-label checkbox-label">
+                  <input type="checkbox" id="fullscreenToggle" class="setting-checkbox">
+                  <span class="checkbox-custom"></span>
+                  <i class="fas fa-expand-arrows-alt"></i>
+                  Fullscreen Mode
+                </label>
+              </div>
+              <div class="setting-item">
+                <label class="setting-label checkbox-label">
+                  <input type="checkbox" id="vsyncToggle" class="setting-checkbox" checked>
+                  <span class="checkbox-custom"></span>
+                  <i class="fas fa-sync"></i>
+                  V-Sync
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-group">
+              <h4 class="group-title">Visual Effects</h4>
+              <div class="setting-item">
+                <label for="shadowQuality" class="setting-label">
+                  <i class="fas fa-moon"></i>
+                  Shadow Quality
+                </label>
+                <select id="shadowQuality" class="setting-select">
+                  <option value="off">Off</option>
+                  <option value="low">Low</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+              <div class="setting-item">
+                <label class="setting-label checkbox-label">
+                  <input type="checkbox" id="bloomToggle" class="setting-checkbox" checked>
+                  <span class="checkbox-custom"></span>
+                  <i class="fas fa-star"></i>
+                  Bloom Effects
+                </label>
+              </div>
+              <div class="setting-item">
+                <label class="setting-label checkbox-label">
+                  <input type="checkbox" id="particlesToggle" class="setting-checkbox" checked>
+                  <span class="checkbox-custom"></span>
+                  <i class="fas fa-snowflake"></i>
+                  Particle Effects
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Audio Settings -->
+          <div class="tab-content" id="audio-tab">
+            <div class="setting-group">
+              <h4 class="group-title">Volume Controls</h4>
+              <div class="setting-item">
+                <label for="masterVolume" class="setting-label">
+                  <i class="fas fa-volume-up"></i>
+                  Master Volume
+                </label>
+                <div class="slider-container">
+                  <input type="range" id="masterVolume" class="setting-slider" min="0" max="100" value="80">
+                  <span class="slider-value">80%</span>
+                </div>
+              </div>
+              <div class="setting-item">
+                <label for="musicVolume" class="setting-label">
+                  <i class="fas fa-music"></i>
+                  Music Volume
+                </label>
+                <div class="slider-container">
+                  <input type="range" id="musicVolume" class="setting-slider" min="0" max="100" value="60">
+                  <span class="slider-value">60%</span>
+                </div>
+              </div>
+              <div class="setting-item">
+                <label for="sfxVolume" class="setting-label">
+                  <i class="fas fa-volume-down"></i>
+                  SFX Volume
+                </label>
+                <div class="slider-container">
+                  <input type="range" id="sfxVolume" class="setting-slider" min="0" max="100" value="75">
+                  <span class="slider-value">75%</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="setting-group">
+              <h4 class="group-title">Audio Options</h4>
+              <div class="setting-item">
+                <label class="setting-label checkbox-label">
+                  <input type="checkbox" id="muteToggle" class="setting-checkbox">
+                  <span class="checkbox-custom"></span>
+                  <i class="fas fa-volume-mute"></i>
+                  Mute All Audio
+                </label>
+              </div>
+              <div class="setting-item">
+                <label class="setting-label checkbox-label">
+                  <input type="checkbox" id="spatialAudio" class="setting-checkbox" checked>
+                  <span class="checkbox-custom"></span>
+                  <i class="fas fa-headphones"></i>
+                  Spatial Audio
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Controls Settings -->
+          <div class="tab-content" id="controls-tab">
+            <div class="setting-group">
+              <h4 class="group-title">Mouse Settings</h4>
+              <div class="setting-item">
+                <label for="sensitivitySlider" class="setting-label">
+                  <i class="fas fa-mouse"></i>
+                  Mouse Sensitivity
+                </label>
+                <div class="slider-container">
+                  <input type="range" id="sensitivitySlider" class="setting-slider" min="0.1" max="3.0" step="0.1" value="1.0">
+                  <span class="slider-value">1.0x</span>
+                </div>
+              </div>
+              <div class="setting-item">
+                <label class="setting-label checkbox-label">
+                  <input type="checkbox" id="invertY" class="setting-checkbox">
+                  <span class="checkbox-custom"></span>
+                  <i class="fas fa-arrows-alt-v"></i>
+                  Invert Y-Axis
+                </label>
+              </div>
+              <div class="setting-item">
+                <label class="setting-label checkbox-label">
+                  <input type="checkbox" id="smoothCamera" class="setting-checkbox" checked>
+                  <span class="checkbox-custom"></span>
+                  <i class="fas fa-video"></i>
+                  Smooth Camera
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-group">
+              <h4 class="group-title">Movement Settings</h4>
+              <div class="setting-item">
+                <label for="moveSpeed" class="setting-label">
+                  <i class="fas fa-tachometer-alt"></i>
+                  Movement Speed
+                </label>
+                <div class="slider-container">
+                  <input type="range" id="moveSpeed" class="setting-slider" min="0.5" max="2.0" step="0.1" value="1.0">
+                  <span class="slider-value">1.0x</span>
+                </div>
+              </div>
+              <div class="setting-item">
+                <label for="sprintMultiplier" class="setting-label">
+                  <i class="fas fa-running"></i>
+                  Sprint Multiplier
+                </label>
+                <div class="slider-container">
+                  <input type="range" id="sprintMultiplier" class="setting-slider" min="1.5" max="3.0" step="0.1" value="2.0">
+                  <span class="slider-value">2.0x</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-footer">
+          <button class="modal-btn secondary-btn" onclick="resetSettings()">
+            <i class="fas fa-undo"></i>
+            Reset to Defaults
+          </button>
+          <button class="modal-btn primary-btn" onclick="saveSettings()">
+            <i class="fas fa-save"></i>
+            Save Settings
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- About Panel -->
+  <div id="aboutPanel" class="modal-overlay" style="display: none;" role="dialog" aria-labelledby="about-title" aria-modal="true">
+    <div class="modal-content about-modal">
+      <div class="modal-header">
+        <h3 id="about-title"><i class="fas fa-info-circle"></i> About Mediaverse</h3>
+        <button class="modal-btn close-btn" onclick="closePanel('aboutPanel')" aria-label="Close about panel">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="about-content">
+          <div class="about-section">
+            <h4 class="section-title">
+              <i class="fas fa-rocket"></i>
+              What is 3D World Explorer?
+            </h4>
+            <p>3D World Explorer is an immersive web-based 3D experience built with cutting-edge web technologies.
+				 Explore a dynamic 3D world with realistic lighting
+				 , interactive objects, and smooth third person conntrolls.</p>
+          </div>
+
+          <div class="about-section">
+            <h4 class="section-title">
+              <i class="fas fa-cogs"></i>
+              Technology Stack
+            </h4>
+            <div class="tech-grid">
+              <div class="tech-item">
+                <i class="fab fa-js"></i>
+                <div class="tech-info">
+                  <span class="tech-name">Three.js</span>
+                  <span class="tech-desc">3D Graphics Engine</span>
+                </div>
+              </div>
+              <div class="tech-item">
+                <i class="fab fa-html5"></i>
+                <div class="tech-info">
+                  <span class="tech-name">WebGL</span>
+                  <span class="tech-desc">Hardware Acceleration</span>
+                </div>
+              </div>
+              <div class="tech-item">
+                <i class="fab fa-css3-alt"></i>
+                <div class="tech-info">
+                  <span class="tech-name">Modern CSS</span>
+                  <span class="tech-desc">Glassmorphism UI</span>
+                </div>
+              </div>
+              <div class="tech-item">
+                <i class="fas fa-cube"></i>
+                <div class="tech-info">
+                  <span class="tech-name">3D Physics</span>
+                  <span class="tech-desc">Collision Detection</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="about-section">
+            <h4 class="section-title">
+              <i class="fas fa-star"></i>
+              Features
+            </h4>
+            <ul class="features-list">
+              <li><i class="fas fa-check"></i> Real-time 3D rendering with WebGL</li>
+              <li><i class="fas fa-check"></i> Third-person camera controls</li>
+              <li><i class="fas fa-check"></i> Dynamic lighting and shadows</li>
+              <li><i class="fas fa-check"></i> Interactive 3D objects</li>
+              <li><i class="fas fa-check"></i> Customizable graphics settings</li>
+              <li><i class="fas fa-check"></i> Responsive design for all devices</li>
+            </ul>
+          </div>
+
+          <div class="about-section">
+            <h4 class="section-title">
+              <i class="fas fa-info"></i>
+              Version Information
+            </h4>
+            <div class="version-details">
+              <div class="version-item">
+                <span class="version-label">Version:</span>
+                <span class="version-value">1.2.0</span>
+              </div>
+              <div class="version-item">
+                <span class="version-label">Build Date:</span>
+                <span class="version-value">July 2025</span>
+              </div>
+              <div class="version-item">
+                <span class="version-label">Engine:</span>
+                <span class="version-value">Three.js r178</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+  <!-- One import map ONLY if you still need it for other modules -->
+  <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.178.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.178.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <!-- Sketchbook engine (must load before we call new Sketchbook.World) -->
+  <script src="build/sketchbook.min.js"></script>
+
+  <!-- Minimal UI helpers (unchanged) -->
+  <script>
+    window.UIManager = {
+      openModal: id => { const el = document.getElementById(id); if (el) el.style.display = 'flex'; },
+      closeModal: id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; },
+      showNotification: (msg, type) => console.log(`[${type}] ${msg}`)
+    };
+    window.SettingsManager = {
+      init: () => console.log('SettingsManager initialized'),
+      saveSettings: () => console.log('Settings saved'),
+      resetToDefaults: () => console.log('Settings reset')
+    };
+  </script>
+
+  <!-- Wire up buttons AFTER the DOM and AFTER sketchbook.min.js -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // START: hide menu and boot the world
+      const startBtn = document.getElementById('startBtn');
+      if (startBtn) {
+        startBtn.addEventListener('click', () => {
+          document.getElementById('mainMenu').style.display = 'none';
+          // Boot the Sketchbook world
+          new Sketchbook.World('build/assets/world.glb');
+        });
+      }
+
+      // Open modals
+      document.querySelectorAll("[data-action='help']").forEach(b =>
+        b.addEventListener('click', () => UIManager.openModal('helpPanel'))
+      );
+      document.querySelectorAll("[data-action='settings']").forEach(b =>
+        b.addEventListener('click', () => UIManager.openModal('settingsPanel'))
+      );
+      document.querySelectorAll("[data-action='about']").forEach(b =>
+        b.addEventListener('click', () => UIManager.openModal('aboutPanel'))
+      );
+
+      // Tabs inside Settings
+      const tabButtons = document.querySelectorAll('.tab-btn');
+      const tabContents = document.querySelectorAll('.tab-content');
+      tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tab = btn.getAttribute('data-tab');
+          tabButtons.forEach(x => x.classList.remove('active'));
+          tabContents.forEach(x => x.classList.remove('active'));
+          btn.classList.add('active');
+          document.getElementById(`${tab}-tab`).classList.add('active');
+        });
+      });
+
+      SettingsManager.init();
+    });
+
+    // Global helpers used by onclick=""
+    function closePanel(id){ UIManager.closeModal(id); }
+    function closeErrorModal(){ closePanel('errorModal'); }
+    function saveSettings(){ SettingsManager.saveSettings(); UIManager.showNotification('Settings saved successfully!', 'success'); }
+    function resetSettings(){ SettingsManager.resetToDefaults(); UIManager.showNotification('Settings reset to defaults', 'info'); }
+  </script>
+</body>
+</html>
