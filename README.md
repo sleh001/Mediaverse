@@ -12,7 +12,7 @@ As I have no more interest in developing this project, it comes to a conclusion.
 - If you wish to modify Sketchbook feel free to fork it.
 - To see if someone is currently maintaining a fork, check out the [Network Graph](https://github.com/swift502/Sketchbook/network).
 
-# 📒 Sketchbook
+# 📒 Mediaverse
 
 Simple web based game engine built on [three.js](https://github.com/mrdoob/three.js) and [cannon.js](https://github.com/schteppe/cannon.js) focused on third-person character controls and related gameplay mechanics.
 
